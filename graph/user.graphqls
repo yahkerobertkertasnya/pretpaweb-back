@@ -1,0 +1,54 @@
+
+directive @auth on INPUT_FIELD_DEFINITION | FIELD_DEFINITION
+
+scalar Upload
+scalar Time
+
+type User {
+    id: ID!
+    name: String!
+    username: String!
+    email: String!
+    dob: Time
+    content: String
+    profile: Upload
+    createdAt: Time
+    followers: [Follow]
+    following: [Follow]
+}
+
+type Follow {
+    follower: User!
+    following: User!
+    createdAt: Time
+}
+
+input NewFollow {
+    follower: ID!
+    following: ID!
+}
+
+input NewUser {
+    name: String!
+    email: String!
+    username: String!
+    password: String!
+}
+
+input LoginUser {
+    email: String!
+    password: String!
+}
+
+type Query {
+    getUser(id: ID!): User!
+    getAllUsers: [User!]! @auth
+}
+
+type Mutation {
+    createUser(inputUser: NewUser!): User!
+    updateUser(id: ID!, inputUser: NewUser!): User!
+    deleteUser(id: ID!): User!
+    authenticateUser(loginUser: LoginUser!): String!
+    followUser(inputFollow: NewFollow!): Follow!
+}

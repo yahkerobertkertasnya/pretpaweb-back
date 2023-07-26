@@ -1,0 +1,23 @@
+
+
+type Tweet {
+    ID: ID!
+    user: User!
+    title: String!
+    content: String!
+}
+
+input newTweet {
+    userID: ID!
+    title: String!
+    content: String!
+}
+
+extend type Query {
+    getUserTweets(id: ID!): [Tweet]!
+    getAllTweets: [Tweet]!
+}
+
+extend type Mutation {
+    createTweet(inputTweet: newTweet!): Tweet!
+}
