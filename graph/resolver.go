@@ -1,6 +1,9 @@
 package graph
 
-import "gorm.io/gorm"
+import (
+	"github.com/yahkerobertkertasnya/preweb/graph/model"
+	"gorm.io/gorm"
+)
 
 // This file will not be regenerated automatically.
 //
@@ -9,5 +12,6 @@ import "gorm.io/gorm"
 //go:generate go run github.com/99designs/gqlgen generate
 
 type Resolver struct {
-	DB *gorm.DB
+	DB      *gorm.DB
+	channel []chan []*model.Tweet
 }

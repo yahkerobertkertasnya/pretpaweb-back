@@ -2,6 +2,7 @@ package helper
 
 import (
 	"context"
+	"fmt"
 	"github.com/99designs/gqlgen/graphql"
 	"github.com/vektah/gqlparser/v2/gqlerror"
 )
@@ -14,6 +15,18 @@ func AuthDirectives(ctx context.Context, next graphql.Resolver) (res interface{}
 			Message: "Permission denied",
 		}
 	}
-	ctx = context.WithValue(ctx, "UserID", token)
+
+	claims, err := ParseJWT(token.(string))
+
+	if err != nil {
+		return nil, &gqlerror.Error{
+			Message: err.Error(),
+		}
+	}
+
+	fmt.Println("testt")
+	fmt.Println(claims["iss"])
+	ctx = context.WithValue(ctx, "UserID", claims["iss"])
+
 	return next(ctx)
 }

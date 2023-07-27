@@ -6,6 +6,7 @@ package graph
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/yahkerobertkertasnya/preweb/graph/model"
@@ -15,28 +16,46 @@ import (
 func (r *mutationResolver) CreateTweet(ctx context.Context, inputTweet model.NewTweet) (*model.Tweet, error) {
 	var user *model.User
 
-	err := r.DB.First(&user, "id = ?", inputTweet.UserID).Error
+	userId := ctx.Value("UserID").(string)
+
+	err := r.DB.First(&user, "id = ?", userId).Error
 
 	if err != nil {
 		return nil, err
 	}
 
 	tweet := &model.Tweet{
-		ID:      uuid.NewString(),
-		UserID:  inputTweet.UserID,
-		User:    user,
-		Title:   inputTweet.Title,
-		Content: inputTweet.Content,
+		ID:        uuid.NewString(),
+		UserID:    userId,
+		User:      user,
+		Content:   inputTweet.Content,
+		CreatedAt: time.Now(),
 	}
 
-	return tweet, r.DB.Save(tweet).Error
+	err2 := r.DB.Save(&tweet).Error
+
+	go func() {
+		var tweets []*model.Tweet
+
+		for _, channel := range r.channel {
+			tweetz := <-channel
+			id := tweetz[0].ID
+
+			err = r.DB.Order("created_at desc").Preload("User").Find(&tweets, "user_id = ?", id).Error
+			channel <- tweets
+		}
+	}()
+
+	return tweet, err2
 }
 
 // GetUserTweets is the resolver for the getUserTweets field.
 func (r *queryResolver) GetUserTweets(ctx context.Context, id string) ([]*model.Tweet, error) {
 	var tweets []*model.Tweet
 
-	return tweets, r.DB.Find(&tweets, "user_id = ?", id).Preload("User").Find(&tweets).Error
+	err := r.DB.Order("created_at desc").Preload("User").Find(&tweets, "user_id = ?", id).Error
+
+	return tweets, err
 }
 
 // GetAllTweets is the resolver for the getAllTweets field.
@@ -45,3 +64,38 @@ func (r *queryResolver) GetAllTweets(ctx context.Context) ([]*model.Tweet, error
 
 	return tweets, r.DB.Find(&tweets).Preload("User").Find(&tweets).Error
 }
+
+// GetUserTweets is the resolver for the getUserTweets field.
+func (r *subscriptionResolver) GetUserTweets(ctx context.Context, id string) (<-chan []*model.Tweet, error) {
+	channel := make(chan []*model.Tweet, 1)
+
+	var tweets []*model.Tweet
+	var err error
+
+	go func() {
+		for {
+			time.Sleep(1 * time.Second)
+			err = r.DB.Order("created_at desc").Preload("User").Find(&tweets, "user_id = ?", id).Error
+
+			if err != nil {
+				continue
+			}
+
+			select {
+			case <-ctx.Done():
+				close(channel)
+				return
+
+			case channel <- tweets:
+				//test
+			}
+		}
+	}()
+
+	return channel, nil
+}
+
+// Subscription returns SubscriptionResolver implementation.
+func (r *Resolver) Subscription() SubscriptionResolver { return &subscriptionResolver{r} }
+
+type subscriptionResolver struct{ *Resolver }

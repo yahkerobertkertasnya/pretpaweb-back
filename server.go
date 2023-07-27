@@ -4,17 +4,21 @@ import (
 	"context"
 	"github.com/99designs/gqlgen/graphql"
 	"github.com/99designs/gqlgen/graphql/handler"
+	"github.com/99designs/gqlgen/graphql/handler/extension"
+	"github.com/99designs/gqlgen/graphql/handler/lru"
+	"github.com/99designs/gqlgen/graphql/handler/transport"
+	"github.com/99designs/gqlgen/graphql/playground"
+	"github.com/go-chi/chi/v5"
+	"github.com/gorilla/websocket"
+	//"github.com/graphql-go/handler"
+	"github.com/rs/cors"
 	"github.com/yahkerobertkertasnya/preweb/database"
+	"github.com/yahkerobertkertasnya/preweb/graph"
 	"github.com/yahkerobertkertasnya/preweb/helper"
 	"github.com/yahkerobertkertasnya/preweb/middleware"
 	"log"
 	"net/http"
 	"os"
-
-	"github.com/99designs/gqlgen/graphql/playground"
-	"github.com/go-chi/chi/v5"
-	"github.com/rs/cors"
-	"github.com/yahkerobertkertasnya/preweb/graph"
 )
 
 const defaultPort = "8080"
@@ -31,11 +35,6 @@ func main() {
 	})
 
 	router.Use(cor.Handler)
-	//router.Get("/", func(w http.ResponseWriter, r *http.Request) {
-	//	w.Write([]byte("Hello World!"))
-	//})
-
-	//http.ListenAndServe(":8080", handler)
 
 	port := os.Getenv("PORT")
 	if port == "" {
@@ -52,7 +51,24 @@ func main() {
 		return helper.AuthDirectives(ctx, next)
 	}
 
-	srv := handler.NewDefaultServer(graph.NewExecutableSchema(c))
+	srv := handler.New(graph.NewExecutableSchema(c))
+	srv.AddTransport(&transport.Websocket{
+		Upgrader: websocket.Upgrader{
+			CheckOrigin: func(r *http.Request) bool {
+				return true
+			},
+		},
+	})
+
+	srv.AddTransport(transport.Options{})
+	srv.AddTransport(transport.GET{})
+	srv.AddTransport(transport.POST{})
+	srv.AddTransport(transport.MultipartForm{})
+	srv.SetQueryCache(lru.New(1000))
+	srv.Use(extension.Introspection{})
+	srv.Use(extension.AutomaticPersistedQuery{
+		Cache: lru.New(100),
+	})
 
 	router.Use(middleware.AuthMiddleware)
 	router.Handle("/", playground.Handler("GraphQL playground", "/query"))

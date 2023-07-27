@@ -5,7 +5,7 @@ import "github.com/yahkerobertkertasnya/preweb/graph/model"
 func MigrateTable() {
 	db := GetInstance()
 
-	err := db.AutoMigrate(&model.User{}, &model.Tweet{})
+	err := db.AutoMigrate(&model.User{}, &model.Tweet{}, &model.Follow{})
 	if err != nil {
 		panic(err)
 	}

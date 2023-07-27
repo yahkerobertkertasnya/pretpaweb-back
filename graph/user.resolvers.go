@@ -7,6 +7,7 @@ package graph
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/yahkerobertkertasnya/preweb/graph/model"
@@ -20,13 +21,8 @@ func (r *mutationResolver) CreateUser(ctx context.Context, inputUser model.NewUs
 		Name:      inputUser.Name,
 		Email:     inputUser.Email,
 		Username:  inputUser.Username,
-		Password:  inputUser.Password,
-		Dob:       nil,
-		Content:   nil,
-		Profile:   nil,
-		CreatedAt: nil,
-		Followers: nil,
-		Following: nil,
+		Password:  *inputUser.Password,
+		CreatedAt: time.Now(),
 	}
 
 	return user, r.DB.Save(user).Error
@@ -43,7 +39,18 @@ func (r *mutationResolver) UpdateUser(ctx context.Context, id string, inputUser 
 	user.Name = inputUser.Name
 	user.Email = inputUser.Email
 	user.Username = inputUser.Username
-	user.Password = inputUser.Password
+	if inputUser.Password != nil {
+		user.Password = *inputUser.Password
+	}
+	if inputUser.Biography != nil {
+		user.Biography = inputUser.Biography
+	}
+	if inputUser.Location != nil {
+		user.Location = inputUser.Location
+	}
+	if inputUser.Website != nil {
+		user.Website = inputUser.Website
+	}
 
 	return user, r.DB.Save(&user).Error
 }
@@ -69,7 +76,7 @@ func (r *mutationResolver) AuthenticateUser(ctx context.Context, loginUser model
 		return "", err
 	}
 
-	ctx = context.WithValue(ctx, "user", user)
+	ctx = context.WithValue(ctx, "userID", user.ID)
 
 	return helper.CreateJWT(user.ID)
 }
@@ -84,6 +91,13 @@ func (r *queryResolver) GetUser(ctx context.Context, id string) (*model.User, er
 	var user *model.User
 
 	return user, r.DB.First(&user, "id = ?", id).Error
+}
+
+// GetUserFromUsername is the resolver for the getUserFromUsername field.
+func (r *queryResolver) GetUserFromUsername(ctx context.Context, username string) (*model.User, error) {
+	var user *model.User
+
+	return user, r.DB.First(&user, "username = ?", username).Error
 }
 
 // GetAllUsers is the resolver for the getAllUsers field.

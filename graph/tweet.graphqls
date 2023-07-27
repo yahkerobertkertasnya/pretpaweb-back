@@ -1,23 +1,26 @@
 
+#import "user.graphqls"
 
 type Tweet {
     ID: ID!
     user: User!
-    title: String!
     content: String!
+    createdAt: Time!
 }
 
 input newTweet {
-    userID: ID!
-    title: String!
     content: String!
+}
+
+type Subscription {
+    getUserTweets(id: ID!): [Tweet]!
 }
 
 extend type Query {
     getUserTweets(id: ID!): [Tweet]!
-    getAllTweets: [Tweet]!
+    getAllTweets: [Tweet]! @auth
 }
 
 extend type Mutation {
-    createTweet(inputTweet: newTweet!): Tweet!
+    createTweet(inputTweet: newTweet!): Tweet! @auth
 }

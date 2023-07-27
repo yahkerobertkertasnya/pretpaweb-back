@@ -3,7 +3,6 @@
 package model
 
 import (
-	"github.com/99designs/gqlgen/graphql"
 	"time"
 )
 
@@ -13,16 +12,20 @@ type LoginUser struct {
 }
 
 type NewUser struct {
-	Name     string `json:"name"`
-	Username string `json:"username"`
-	Email    string `json:"email"`
-	Password string `json:"password"`
+	Name      string     `json:"name"`
+	Email     string     `json:"email"`
+	Username  string     `json:"username"`
+	Password  *string    `json:"password,omitempty"`
+	Biography *string    `json:"biography,omitempty"`
+	Location  *string    `json:"location,omitempty"`
+	Website   *string    `json:"website,omitempty"`
+	Dob       *time.Time `json:"dob,omitempty"`
 }
 
 type Follow struct {
 	FollowerID  string     `json:"followerID" gorm:"primaryKey"`
-	Follower    *User      `json:"follower" gorm:"foreignKey:FollowerID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
 	FollowingID string     `json:"followingID" gorm:"primaryKey"`
+	Follower    *User      `json:"follower" gorm:"foreignKey:FollowerID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
 	Following   *User      `json:"following" gorm:"foreignKey:FollowingID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
 	CreatedAt   *time.Time `json:"createdAt,omitempty"`
 }
@@ -33,15 +36,16 @@ type NewFollow struct {
 }
 
 type User struct {
-	ID        string          `json:"id"`
-	Name      string          `json:"name"`
-	Email     string          `json:"email"`
-	Username  string          `json:"username"`
-	Password  string          `json:"password"`
-	Dob       *time.Time      `json:"dob,omitempty"`
-	Content   *string         `json:"content,omitempty"`
-	Profile   *graphql.Upload `json:"profile,omitempty"`
-	CreatedAt *time.Time      `json:"createdAt,omitempty"`
-	Followers []*Follow       `json:"followers,omitempty"`
-	Following []*Follow       `json:"following,omitempty"`
+	ID        string     `json:"id"`
+	Name      string     `json:"name"`
+	Email     string     `json:"email"`
+	Username  string     `json:"username"`
+	Password  string     `json:"password"`
+	CreatedAt time.Time  `json:"createdAt"`
+	Biography *string    `json:"biography,omitempty"`
+	Location  *string    `json:"location,omitempty"`
+	Website   *string    `json:"website,omitempty"`
+	Dob       *time.Time `json:"dob,omitempty"`
+	Followers *int       `json:"followers,omitempty"`
+	Following *int       `json:"following,omitempty"`
 }

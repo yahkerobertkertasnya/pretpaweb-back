@@ -1,7 +1,6 @@
 
 directive @auth on INPUT_FIELD_DEFINITION | FIELD_DEFINITION
 
-scalar Upload
 scalar Time
 
 type User {
@@ -9,12 +8,13 @@ type User {
     name: String!
     username: String!
     email: String!
+    createdAt: Time!
+    biography: String
+    location: String
+    website: String
     dob: Time
-    content: String
-    profile: Upload
-    createdAt: Time
-    followers: [Follow]
-    following: [Follow]
+    followers: Int
+    following: Int
 }
 
 type Follow {
@@ -32,7 +32,11 @@ input NewUser {
     name: String!
     email: String!
     username: String!
-    password: String!
+    password: String
+    biography: String
+    location: String
+    website: String
+    dob: Time
 }
 
 input LoginUser {
@@ -42,6 +46,7 @@ input LoginUser {
 
 type Query {
     getUser(id: ID!): User!
+    getUserFromUsername(username: String!): User!
     getAllUsers: [User!]! @auth
 }
 
