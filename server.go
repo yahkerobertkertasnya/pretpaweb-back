@@ -28,7 +28,7 @@ func main() {
 	//router.Use(middleware.Logger)
 
 	cor := cors.New(cors.Options{
-		AllowedOrigins:   []string{"http://localhost", "http://localhost:3000", "http://localhost:8080"},
+		AllowedOrigins:   []string{"http://localhost", "http://localhost:3000", "http://localhost:8080", "chrome-extension://flnheeellpciglgpaodhkhmapeljopja"},
 		AllowedHeaders:   []string{"Authorization", "Content-Type"},
 		AllowCredentials: true,
 		Debug:            true,
@@ -73,6 +73,9 @@ func main() {
 	router.Use(middleware.AuthMiddleware)
 	router.Handle("/", playground.Handler("GraphQL playground", "/query"))
 	router.Handle("/query", srv)
+
+	fileServer := http.FileServer(http.Dir("public/images"))
+	router.Handle("/public/images/*", http.StripPrefix("/public/images/", fileServer))
 
 	log.Printf("connect to http://localhost:%s/ for GraphQL playground", port)
 	log.Fatal(http.ListenAndServe(":"+port, router))

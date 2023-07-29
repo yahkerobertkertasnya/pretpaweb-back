@@ -36,16 +36,23 @@ type NewFollow struct {
 }
 
 type User struct {
-	ID        string     `json:"id"`
-	Name      string     `json:"name"`
-	Email     string     `json:"email"`
-	Username  string     `json:"username"`
-	Password  string     `json:"password"`
-	CreatedAt time.Time  `json:"createdAt"`
-	Biography *string    `json:"biography,omitempty"`
-	Location  *string    `json:"location,omitempty"`
-	Website   *string    `json:"website,omitempty"`
-	Dob       *time.Time `json:"dob,omitempty"`
-	Followers *int       `json:"followers,omitempty"`
-	Following *int       `json:"following,omitempty"`
+	ID         string     `json:"id"`
+	Name       string     `json:"name"`
+	Email      string     `json:"email"`
+	Username   string     `json:"username"`
+	Password   string     `json:"password"`
+	CreatedAt  time.Time  `json:"createdAt"`
+	Profile    *string    `json:"profile,omitempty"`
+	Background *string    `json:"background,omitempty"`
+	Biography  *string    `json:"biography,omitempty"`
+	Location   *string    `json:"location,omitempty"`
+	Website    *string    `json:"website,omitempty"`
+	Dob        *time.Time `json:"dob,omitempty"`
+	Followers  *int       `json:"followers,omitempty"`
+	Following  *int       `json:"following,omitempty"`
+}
+
+type UserAuth struct {
+	User  *User  `json:"user"`
+	Token string `json:"token"`
 }
