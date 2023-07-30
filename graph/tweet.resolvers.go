@@ -6,6 +6,9 @@ package graph
 
 import (
 	"context"
+	"fmt"
+	"io"
+	"os"
 	"time"
 
 	"github.com/google/uuid"
@@ -24,36 +27,183 @@ func (r *mutationResolver) CreateTweet(ctx context.Context, inputTweet model.New
 		return nil, err
 	}
 
+	photo := inputTweet.Image
+
+	var src = ""
+	if photo != nil {
+		filename := uuid.NewString() + photo.Filename
+		out, err := os.Create("public/images/" + filename)
+
+		if err != nil {
+			return nil, err
+		}
+		defer out.Close()
+
+		_, err = io.Copy(out, photo.File)
+		if err != nil {
+			return nil, err
+		}
+
+		src = "images/" + filename
+	}
+
+	fmt.Println(inputTweet.ParentID)
+
 	tweet := &model.Tweet{
-		ID:        uuid.NewString(),
-		UserID:    userId,
-		User:      user,
-		Content:   inputTweet.Content,
-		CreatedAt: time.Now(),
+		ID:           uuid.NewString(),
+		UserID:       userId,
+		User:         user,
+		Content:      inputTweet.Content,
+		Image:        src,
+		CreatedAt:    time.Now(),
+		ParentID:     inputTweet.ParentID,
+		Parent:       nil,
+		Comments:     nil,
+		CommentCount: nil,
+		Liked:        false,
+		LikeCount:    0,
+	}
+
+	var temp = tweet
+	for temp.ParentID != nil {
+		parentID := temp.ParentID
+		temp = nil
+		if err = r.DB.First(&temp, "id = ?", parentID).Error; err != nil {
+			return nil, err
+		}
+
+		count := temp.CommentCount
+
+		if count != nil {
+			*count = *count + 1
+			temp.CommentCount = count
+		} else {
+			count = new(int)
+			*count = 1
+			temp.CommentCount = count
+		}
+
+		if err := r.DB.Save(&temp).Error; err != nil {
+			return nil, err
+		}
 	}
 
 	err2 := r.DB.Save(&tweet).Error
 
-	go func() {
-		var tweets []*model.Tweet
-
-		for _, channel := range r.channel {
-			tweetz := <-channel
-			id := tweetz[0].ID
-
-			err = r.DB.Order("created_at desc").Preload("User").Find(&tweets, "user_id = ?", id).Error
-			channel <- tweets
-		}
-	}()
-
 	return tweet, err2
+}
+
+// LikeTweet is the resolver for the likeTweet field.
+func (r *mutationResolver) LikeTweet(ctx context.Context, id string) (bool, error) {
+	userId := ctx.Value("UserID").(string)
+
+	tweetLike := &model.TweetLike{
+		TweetID: id,
+		UserID:  userId,
+	}
+
+	if err := r.DB.Save(&tweetLike).Error; err != nil {
+		return false, err
+	}
+
+	var tweet *model.Tweet
+
+	if err := r.DB.First(&tweet, "id = ?", id).Error; err != nil {
+		return false, err
+	}
+
+	tweet.LikeCount = tweet.LikeCount + 1
+
+	if err := r.DB.Save(&tweet).Error; err != nil {
+		return false, err
+	}
+
+	return true, nil
+}
+
+// UnlikeTweet is the resolver for the unlikeTweet field.
+func (r *mutationResolver) UnlikeTweet(ctx context.Context, id string) (bool, error) {
+	userId := ctx.Value("UserID").(string)
+
+	tweetLike := &model.TweetLike{
+		TweetID: id,
+		UserID:  userId,
+	}
+
+	if err := r.DB.Delete(&tweetLike).Error; err != nil {
+		return false, err
+	}
+
+	var tweet *model.Tweet
+
+	if err := r.DB.First(&tweet, "id = ?", id).Error; err != nil {
+		return false, err
+	}
+
+	tweet.LikeCount = tweet.LikeCount - 1
+
+	if err := r.DB.Save(&tweet).Error; err != nil {
+		return false, err
+	}
+
+	return true, nil
+}
+
+// GetTweet is the resolver for the getTweet field.
+func (r *queryResolver) GetTweet(ctx context.Context, id string) (*model.Tweet, error) {
+	var tweet *model.Tweet
+	var liked []*model.TweetLike
+
+	userId := ctx.Value("UserID").(string)
+
+	err := r.DB.
+		First(&tweet, "id = ?", id).
+		Preload("Parent").
+		Preload("User").
+		Preload("Comments").
+		Preload("Like").
+		Preload("Like.User").
+		Preload("Comments.User").
+		First(&tweet).Error
+
+	if err != nil {
+		return nil, err
+	}
+
+	var ids []string
+	for i := 0; i < len(tweet.Comments); i++ {
+		ids = append(ids, tweet.Comments[i].ID)
+	}
+	ids = append(ids, tweet.ID)
+
+	fmt.Println(ids)
+	if err := r.DB.Find(&liked, "user_id = ? and tweet_id in (?)", userId, ids).Error; err != nil {
+		return nil, err
+	}
+
+	fmt.Println(liked)
+	for i := 0; i < len(tweet.Comments); i++ {
+		for j := 0; j < len(liked); j++ {
+			if tweet.Comments[i].ID == liked[j].TweetID {
+				tweet.Comments[i].Liked = true
+			}
+		}
+	}
+
+	for j := 0; j < len(liked); j++ {
+		if tweet.ID == liked[j].TweetID {
+			tweet.Liked = true
+		}
+	}
+
+	return tweet, nil
 }
 
 // GetUserTweets is the resolver for the getUserTweets field.
 func (r *queryResolver) GetUserTweets(ctx context.Context, id string) ([]*model.Tweet, error) {
 	var tweets []*model.Tweet
 
-	err := r.DB.Order("created_at desc").Preload("User").Find(&tweets, "user_id = ?", id).Error
+	err := r.DB.Order("created_at asc").Preload("User").Find(&tweets, "user_id = ? and parent_id IS ?", id, nil).Error
 
 	return tweets, err
 }
@@ -61,8 +211,31 @@ func (r *queryResolver) GetUserTweets(ctx context.Context, id string) ([]*model.
 // GetAllTweets is the resolver for the getAllTweets field.
 func (r *queryResolver) GetAllTweets(ctx context.Context) ([]*model.Tweet, error) {
 	var tweets []*model.Tweet
+	var liked []*model.TweetLike
 
-	return tweets, r.DB.Find(&tweets).Preload("User").Find(&tweets).Error
+	if err := r.DB.Order("created_at desc").Preload("User").Find(&tweets, "parent_id IS NULL").Error; err != nil {
+		return nil, err
+	}
+
+	var ids []string
+	for i := 0; i < len(tweets); i++ {
+		ids = append(ids, tweets[i].ID)
+	}
+
+	userId := ctx.Value("UserID").(string)
+	if err := r.DB.Find(&liked, "user_id = ? and tweet_id in (?)", userId, ids).Error; err != nil {
+		return nil, err
+	}
+
+	for i := 0; i < len(tweets); i++ {
+		for j := 0; j < len(liked); j++ {
+			if tweets[i].ID == liked[j].TweetID {
+				tweets[i].Liked = true
+			}
+		}
+	}
+
+	return tweets, nil
 }
 
 // GetUserTweets is the resolver for the getUserTweets field.
@@ -75,7 +248,7 @@ func (r *subscriptionResolver) GetUserTweets(ctx context.Context, id string) (<-
 	go func() {
 		for {
 			time.Sleep(1 * time.Second)
-			err = r.DB.Order("created_at desc").Preload("User").Find(&tweets, "user_id = ?", id).Error
+			err = r.DB.Order("created_at asc").Preload("User").Find(&tweets, "user_id = ? and parent_id IS NULL", id).Error
 
 			if err != nil {
 				continue

@@ -4,6 +4,8 @@ package model
 
 //import (
 //	"time"
+//
+//	"github.com/99designs/gqlgen/graphql"
 //)
 //
 //type Follow struct {
@@ -22,6 +24,12 @@ package model
 //	Following string `json:"following"`
 //}
 //
+//type NewTweet struct {
+//	Content  string          `json:"content"`
+//	ParentID *string         `json:"parentID,omitempty"`
+//	Image    *graphql.Upload `json:"image,omitempty"`
+//}
+//
 //type NewUser struct {
 //	Name      string     `json:"name"`
 //	Email     string     `json:"email"`
@@ -34,10 +42,21 @@ package model
 //}
 //
 //type Tweet struct {
-//	ID        string    `json:"ID"`
-//	User      *User     `json:"user"`
-//	Content   string    `json:"content"`
-//	CreatedAt time.Time `json:"createdAt"`
+//	ID           string       `json:"ID"`
+//	User         *User        `json:"user"`
+//	Content      string       `json:"content"`
+//	Image        string       `json:"image"`
+//	CreatedAt    time.Time    `json:"createdAt"`
+//	Liked        bool         `json:"liked"`
+//	LikeCount    int          `json:"likeCount"`
+//	Parent       *Tweet       `json:"parent,omitempty"`
+//	Comments     []*Tweet     `json:"comments,omitempty"`
+//	CommentCount *int         `json:"commentCount,omitempty"`
+//	Like         []*TweetLike `json:"like,omitempty"`
+//}
+//
+//type TweetLike struct {
+//	User *User `json:"user"`
 //}
 //
 //type User struct {
@@ -59,8 +78,4 @@ package model
 //type UserAuth struct {
 //	User  *User  `json:"user"`
 //	Token string `json:"token"`
-//}
-//
-//type NewTweet struct {
-//	Content string `json:"content"`
 //}

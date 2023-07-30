@@ -47,15 +47,16 @@ input LoginUser {
     password: String!
 }
 
+type UserAuth {
+    user: User!
+    token: String!
+}
+
 type Query {
     getUser(id: ID!): User!
     getUserFromUsername(username: String!): User!
     getAllUsers: [User!]! @auth
-}
-
-type UserAuth {
-    user: User!
-    token: String!
+    getUserAuth: User! @auth
 }
 
 type Mutation {

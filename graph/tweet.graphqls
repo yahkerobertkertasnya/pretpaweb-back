@@ -5,22 +5,40 @@ type Tweet {
     ID: ID!
     user: User!
     content: String!
+    image: String!
     createdAt: Time!
+    liked: Boolean!
+    likeCount: Int!
+    parent: Tweet
+    comments: [Tweet]
+    commentCount: Int
+    like: [TweetLike]
 }
 
-input newTweet {
-    content: String!
+type TweetLike {
+    user: User!
 }
+
+input NewTweet {
+    content: String!
+    parentID: String
+    image: Upload
+}
+
 
 type Subscription {
     getUserTweets(id: ID!): [Tweet]!
 }
 
 extend type Query {
+    getTweet(id: ID!): Tweet! @auth
     getUserTweets(id: ID!): [Tweet]!
     getAllTweets: [Tweet]! @auth
+
 }
 
 extend type Mutation {
-    createTweet(inputTweet: newTweet!): Tweet! @auth
+    createTweet(inputTweet: NewTweet!): Tweet! @auth
+    likeTweet(id: ID!): Boolean! @auth
+    unlikeTweet(id: ID!): Boolean! @auth
 }

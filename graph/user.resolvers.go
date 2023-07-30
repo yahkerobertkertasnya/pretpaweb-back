@@ -184,6 +184,21 @@ func (r *queryResolver) GetAllUsers(ctx context.Context) ([]*model.User, error) 
 	return users, r.DB.Find(&users).Error
 }
 
+// GetUserAuth is the resolver for the getUserAuth field.
+func (r *queryResolver) GetUserAuth(ctx context.Context) (*model.User, error) {
+	var user *model.User
+
+	userId := ctx.Value("UserID").(string)
+
+	err := r.DB.First(&user, "id = ?", userId).Error
+
+	if err != nil {
+		return nil, err
+	}
+
+	return user, nil
+}
+
 // Mutation returns MutationResolver implementation.
 func (r *Resolver) Mutation() MutationResolver { return &mutationResolver{r} }
 
